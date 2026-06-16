@@ -98,11 +98,3 @@ El archivo `dvc.yaml` documenta el pipeline reproducible de entrenamiento y eval
 ```bash
 dvc repro
 ```
-
-## Limitaciones
-
-El dataset es sintético, por lo que los resultados no deben interpretarse como evidencia directa sobre clientes reales. Sin embargo, las variables simulan dimensiones habituales de un problema de churn: antigüedad, facturación, uso, soporte, pagos y tipo de contrato.
-
-## Próximos pasos
-
-En futuras etapas, el modelo podrá exponerse mediante una API local y monitorearse con herramientas de observabilidad.
