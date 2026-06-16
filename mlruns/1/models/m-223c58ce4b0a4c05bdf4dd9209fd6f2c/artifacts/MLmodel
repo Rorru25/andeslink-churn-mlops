@@ -1,0 +1,23 @@
+artifact_path: file:///C:/Users/rocio/OneDrive/Documentos/andeslink-churn-mlops-primer-parcial/andeslink-churn-mlops/mlruns/1/models/m-223c58ce4b0a4c05bdf4dd9209fd6f2c/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.12.3
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.9.0
+    skops_trusted_types: null
+mlflow_version: 3.13.0
+model_id: m-223c58ce4b0a4c05bdf4dd9209fd6f2c
+model_size_bytes: 27089711
+model_uuid: m-223c58ce4b0a4c05bdf4dd9209fd6f2c
+prompts: null
+run_id: aa2bdaa0169949858a1a9e2a3c826273
+utc_time_created: '2026-06-16 03:46:22.716696'

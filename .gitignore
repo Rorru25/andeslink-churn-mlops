@@ -4,11 +4,10 @@ __pycache__/
 .env
 .venv/
 env/
-mlruns/
+.pytest_cache/
 .DS_Store
-# Archivos generados
-reports/figures/*.png
-# Modelos generados: incluir manualmente en la entrega final si el docente lo pide
-# models/*.joblib
-# Datos procesados regenerables
 data/processed/
+# models/*.joblib
+# reports/figures/*.png
+# mlruns/
+# mlflow.db
