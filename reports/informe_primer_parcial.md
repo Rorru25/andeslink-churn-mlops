@@ -392,4 +392,10 @@ También debe considerarse que, aunque la regresión logística obtuvo el mejor 
 
 ## 17. Conclusión
 
-En esta primera etapa se desarrolló una solución inicial de Machine 
+En esta primera etapa se desarrolló una solución inicial de Machine Learning para predecir churn de clientes en AndesLink Servicios Digitales S.A.
+
+El trabajo incluyó la comprensión del problema de negocio, el análisis exploratorio del dataset, la preparación de datos, el entrenamiento de tres modelos supervisados, la evaluación mediante métricas de clasificación, la selección del modelo final y la serialización del pipeline completo.
+
+El modelo seleccionado fue una regresión logística, ya que obtuvo el mejor F1-score y el mejor ROC-AUC entre las alternativas evaluadas. Si bien los resultados son mejorables, el modelo constituye una base funcional y reproducible para continuar con las siguientes etapas del proyecto.
+
+La solución fue organizada como un proyecto modular, con código reutilizable, pruebas básicas, archivos de entorno, documentación e informe técnico. De esta manera, la entrega no queda limitada a un notebook, sino que se aproxima a una práctica inicial de MLOps local.
