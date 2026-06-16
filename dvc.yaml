@@ -1,0 +1,21 @@
+stages:
+  train:
+    cmd: python -m src.train
+    deps:
+      - data/raw/churn_sintetico.csv
+      - src/train.py
+      - src/data.py
+      - src/features.py
+    outs:
+      - models/churn_model.joblib
+    metrics:
+      - reports/evaluation_metrics.json
+
+  evaluate:
+    cmd: python -m src.evaluate
+    deps:
+      - models/churn_model.joblib
+      - src/evaluate.py
+      - data/raw/churn_sintetico.csv
+    metrics:
+      - reports/evaluation_report.json
