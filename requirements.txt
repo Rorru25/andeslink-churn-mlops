@@ -11,3 +11,5 @@ pytest
 fastapi
 uvicorn[standard]
 pydantic
+streamlit
+requests
