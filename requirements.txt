@@ -8,3 +8,6 @@ mlflow
 dvc
 joblib
 pytest
+fastapi
+uvicorn[standard]
+pydantic
