@@ -24,7 +24,6 @@ La solución está compuesta por dos servicios:
 
 El flujo de la aplicación es el siguiente:
 
-```text
 Usuario
   |
   v
@@ -46,7 +45,6 @@ Predicción y probabilidad
   |
   v
 Resultado mostrado en Streamlit
-```
 
 Docker Compose se utiliza para construir y ejecutar ambos servicios dentro de contenedores conectados mediante una red local.
 
@@ -78,9 +76,7 @@ Esta es la forma principal de despliegue del proyecto.
 
 Con Docker Desktop abierto, ejecutar:
 
-```powershell
 docker compose up --build -d
-```
 
 Este comando:
 
@@ -94,9 +90,7 @@ Este comando:
 
 Ejecutar:
 
-```powershell
 docker compose ps
-```
 
 Los servicios `api` y `streamlit` deben aparecer en ejecución.
 
@@ -104,49 +98,41 @@ Los servicios `api` y `streamlit` deben aparecer en ejecución.
 
 Documentación Swagger de la API:
 
-```text
+
 http://localhost:8000/docs
-```
+
 
 Estado de la API:
 
-```text
+
 http://localhost:8000/health
-```
+
 
 Interfaz Streamlit:
 
-```text
+
 http://localhost:8501
-```
+
 
 ### 4.4 Consultar los registros
 
 Logs de FastAPI:
 
-```powershell
 docker compose logs api
-```
 
 Logs de Streamlit:
 
-```powershell
 docker compose logs streamlit
-```
 
 Para seguir los logs en tiempo real:
 
-```powershell
 docker compose logs -f
-```
 
 ### 4.5 Detener los servicios
 
 Ejecutar:
 
-```powershell
 docker compose down
-```
 
 Este comando detiene y elimina los contenedores creados por Docker Compose, sin borrar el código ni el modelo.
 
@@ -160,52 +146,51 @@ Esta alternativa puede utilizarse para desarrollo o verificación individual de 
 
 Desde la raíz del proyecto:
 
-```powershell
+
 python -m venv .venv
-```
+
 
 ### 5.2 Instalar las dependencias
 
 No es obligatorio activar el entorno virtual. Las dependencias pueden instalarse utilizando directamente su intérprete de Python:
 
-```powershell
+
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
+
 
 ### 5.3 Iniciar FastAPI
 
 En una primera terminal:
 
-```powershell
+
 .\.venv\Scripts\python.exe -m uvicorn app.api.main:app --reload
-```
+
 
 La API queda disponible en:
 
-```text
+
 http://localhost:8000
-```
+
 
 La documentación Swagger puede consultarse en:
 
-```text
+
 http://localhost:8000/docs
-```
+
 
 ### 5.4 Iniciar Streamlit
 
 Sin detener FastAPI, abrir una segunda terminal y ejecutar:
 
-```powershell
+
 .\.venv\Scripts\python.exe -m streamlit run app\streamlit_app\app.py
-```
+
 
 La interfaz queda disponible en:
 
-```text
 http://localhost:8501
-```
+
 
 FastAPI debe permanecer en ejecución para que Streamlit pueda solicitar predicciones.
 
@@ -215,15 +200,14 @@ FastAPI debe permanecer en ejecución para que Streamlit pueda solicitar predicc
 
 Cuando la aplicación se ejecuta localmente sin Docker, Streamlit utiliza por defecto:
 
-```text
+
 http://127.0.0.1:8000
-```
 
 Cuando se ejecuta mediante Docker Compose, utiliza:
 
-```text
+
 http://api:8000
-```
+
 
 La dirección de la API se configura mediante la variable de entorno `API_URL` definida en `docker-compose.yml`.
 
@@ -243,12 +227,10 @@ Comprueba que la API esté activa y que el modelo haya sido cargado.
 
 Ejemplo de respuesta:
 
-```json
 {
   "status": "ok",
   "model_loaded": true
 }
-```
 
 ### `POST /predict`
 
@@ -256,7 +238,6 @@ Recibe los datos de un cliente y devuelve la predicción de churn.
 
 Ejemplo de solicitud:
 
-```json
 {
   "tenure_months": 7,
   "monthly_charge": 58.23,
@@ -274,18 +255,15 @@ Ejemplo de solicitud:
   "customer_age": 53,
   "is_promo": 1
 }
-```
 
 Ejemplo de respuesta:
 
-```json
 {
   "prediction": 1,
   "churn_probability": 0.6788,
   "risk_level": "medio",
   "model_name": "logistic_regression"
 }
-```
 
 El valor exacto de la probabilidad depende de los datos enviados.
 
@@ -321,9 +299,7 @@ Las pruebas se ejecutan con Pytest.
 
 Desde la raíz del proyecto:
 
-```powershell
 .\.venv\Scripts\python.exe -m pytest -v
-```
 
 Las pruebas verifican:
 
