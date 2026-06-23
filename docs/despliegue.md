@@ -2,28 +2,20 @@
 
 ## 1. Objetivo
 
-Este documento describe el despliegue local del sistema de predicción de churn desarrollado para AndesLink Servicios Digitales S.A.
+Este documento describe cómo ejecutar localmente el sistema de predicción de churn desarrollado para AndesLink Servicios Digitales S.A.
 
-La solución permite ingresar los datos de un cliente mediante una interfaz gráfica, enviarlos a una API de inferencia y obtener:
+La solución permite ingresar los datos de un cliente mediante una interfaz gráfica, enviarlos a una API de inferencia y obtener la clase predicha, la probabilidad estimada de churn, el nivel de riesgo y el nombre del modelo utilizado.
 
-* la clase predicha;
-* la probabilidad estimada de churn;
-* el nivel de riesgo;
-* el nombre del modelo utilizado.
-
-El modelo se carga desde el archivo serializado `models/churn_model.joblib`. No es necesario volver a entrenarlo cada vez que se inicia la aplicación.
-
----
+El modelo se carga desde `models/churn_model.joblib`, sin necesidad de reentrenarlo al iniciar la aplicación.
 
 ## 2. Arquitectura local
 
-La solución está compuesta por dos servicios:
+La solución está compuesta por:
 
-* **Streamlit:** interfaz gráfica utilizada para ingresar los datos del cliente y visualizar el resultado.
-* **FastAPI:** servicio de inferencia que valida los datos, ejecuta el modelo y devuelve la predicción.
+- **Streamlit:** interfaz gráfica para ingresar datos y visualizar resultados.
+- **FastAPI:** servicio de inferencia que valida los datos, ejecuta el modelo y devuelve la predicción.
 
-El flujo de la aplicación es el siguiente:
-
+```text
 Usuario
   |
   v
@@ -45,199 +37,148 @@ Predicción y probabilidad
   |
   v
 Resultado mostrado en Streamlit
+```
 
-Docker Compose se utiliza para construir y ejecutar ambos servicios dentro de contenedores conectados mediante una red local.
-
----
+Docker Compose construye y ejecuta ambos servicios dentro de una red local.
 
 ## 3. Requisitos
 
-### Para ejecutar el proyecto con Docker
+### Ejecución con Docker
 
-* Docker Desktop.
-* Docker Compose, incluido en Docker Desktop.
-* Puertos locales `8000` y `8501` disponibles.
+- Docker Desktop.
+- Docker Compose, incluido en Docker Desktop.
+- Puertos `8000` y `8501` disponibles.
 
-### Para ejecutarlo sin Docker
+### Ejecución sin Docker
 
-* Python 3.12.
-* Un entorno virtual de Python.
-* Las dependencias declaradas en `requirements.txt`.
+- Python 3.12.
+- Un entorno virtual de Python.
+- Dependencias declaradas en `requirements.txt`.
 
-Los comandos deben ejecutarse desde la carpeta raíz del proyecto.
-
----
+Todos los comandos deben ejecutarse desde la carpeta raíz del proyecto.
 
 ## 4. Ejecución con Docker Compose
 
-Esta es la forma principal de despliegue del proyecto.
+Esta es la forma principal de despliegue.
 
 ### 4.1 Construir e iniciar los servicios
 
-Con Docker Desktop abierto, ejecutar:
-
+```powershell
 docker compose up --build -d
+```
 
-Este comando:
-
-* construye la imagen definida en el `Dockerfile`;
-* instala las dependencias del proyecto;
-* inicia el servicio de FastAPI;
-* inicia la interfaz Streamlit;
-* conecta ambos servicios mediante Docker Compose.
+Este comando construye la imagen, instala las dependencias e inicia FastAPI y Streamlit.
 
 ### 4.2 Verificar los contenedores
 
-Ejecutar:
-
+```powershell
 docker compose ps
+```
 
 Los servicios `api` y `streamlit` deben aparecer en ejecución.
 
-### 4.3 Acceder a las aplicaciones
+### 4.3 Accesos
 
-Documentación Swagger de la API:
+- Swagger: `http://localhost:8000/docs`
+- Estado de la API: `http://localhost:8000/health`
+- Streamlit: `http://localhost:8501`
 
+### 4.4 Consultar logs
 
-http://localhost:8000/docs
-
-
-Estado de la API:
-
-
-http://localhost:8000/health
-
-
-Interfaz Streamlit:
-
-
-http://localhost:8501
-
-
-### 4.4 Consultar los registros
-
-Logs de FastAPI:
-
+```powershell
 docker compose logs api
-
-Logs de Streamlit:
-
 docker compose logs streamlit
+```
 
-Para seguir los logs en tiempo real:
+Para seguir todos los logs en tiempo real:
 
+```powershell
 docker compose logs -f
+```
 
 ### 4.5 Detener los servicios
 
-Ejecutar:
-
+```powershell
 docker compose down
+```
 
-Este comando detiene y elimina los contenedores creados por Docker Compose, sin borrar el código ni el modelo.
-
----
+Este comando detiene y elimina los contenedores sin borrar el código ni el modelo.
 
 ## 5. Ejecución local sin Docker
 
-Esta alternativa puede utilizarse para desarrollo o verificación individual de los servicios.
-
 ### 5.1 Crear el entorno virtual
 
-Desde la raíz del proyecto:
-
-
+```powershell
 python -m venv .venv
-
+```
 
 ### 5.2 Instalar las dependencias
 
-No es obligatorio activar el entorno virtual. Las dependencias pueden instalarse utilizando directamente su intérprete de Python:
-
-
+```powershell
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-
+```
 
 ### 5.3 Iniciar FastAPI
 
 En una primera terminal:
 
-
+```powershell
 .\.venv\Scripts\python.exe -m uvicorn app.api.main:app --reload
+```
 
-
-La API queda disponible en:
-
-
-http://localhost:8000
-
-
-La documentación Swagger puede consultarse en:
-
-
-http://localhost:8000/docs
-
+La API queda disponible en `http://localhost:8000` y Swagger en `http://localhost:8000/docs`.
 
 ### 5.4 Iniciar Streamlit
 
-Sin detener FastAPI, abrir una segunda terminal y ejecutar:
+En una segunda terminal, manteniendo FastAPI activo:
 
-
+```powershell
 .\.venv\Scripts\python.exe -m streamlit run app\streamlit_app\app.py
+```
 
+La interfaz queda disponible en `http://localhost:8501`.
 
-La interfaz queda disponible en:
+## 6. Comunicación entre servicios
 
-http://localhost:8501
+Sin Docker, Streamlit utiliza por defecto:
 
-
-FastAPI debe permanecer en ejecución para que Streamlit pueda solicitar predicciones.
-
----
-
-## 6. Comunicación entre los servicios
-
-Cuando la aplicación se ejecuta localmente sin Docker, Streamlit utiliza por defecto:
-
-
+```text
 http://127.0.0.1:8000
+```
 
-Cuando se ejecuta mediante Docker Compose, utiliza:
+Con Docker Compose utiliza:
 
-
+```text
 http://api:8000
+```
 
+La dirección se configura mediante la variable de entorno `API_URL`. Dentro de Compose, `api` es el nombre del servicio de FastAPI y funciona como dirección interna entre contenedores.
 
-La dirección de la API se configura mediante la variable de entorno `API_URL` definida en `docker-compose.yml`.
-
-Dentro de Docker Compose, `api` es el nombre del servicio de FastAPI y funciona como dirección interna entre los contenedores.
-
----
-
-## 7. Endpoints disponibles
+## 7. Endpoints
 
 ### `GET /`
 
-Devuelve información general de la aplicación y las rutas disponibles.
+Devuelve información general de la aplicación.
 
 ### `GET /health`
 
 Comprueba que la API esté activa y que el modelo haya sido cargado.
 
-Ejemplo de respuesta:
-
+```json
 {
   "status": "ok",
   "model_loaded": true
 }
+```
 
 ### `POST /predict`
 
-Recibe los datos de un cliente y devuelve la predicción de churn.
+Recibe los datos del cliente y devuelve la predicción de churn.
 
 Ejemplo de solicitud:
 
+```json
 {
   "tenure_months": 7,
   "monthly_charge": 58.23,
@@ -255,74 +196,53 @@ Ejemplo de solicitud:
   "customer_age": 53,
   "is_promo": 1
 }
+```
 
 Ejemplo de respuesta:
 
+```json
 {
   "prediction": 1,
   "churn_probability": 0.6788,
   "risk_level": "medio",
   "model_name": "logistic_regression"
 }
+```
 
-El valor exacto de la probabilidad depende de los datos enviados.
-
----
+La probabilidad exacta depende de los datos enviados.
 
 ## 8. Validación y manejo de errores
 
-El contrato de entrada y salida de la API está definido mediante modelos Pydantic.
+El contrato de entrada y salida está definido con Pydantic. Se validan campos obligatorios, tipos, rangos numéricos, variables binarias y categorías permitidas.
 
-Entre las validaciones implementadas se incluyen:
+Códigos principales:
 
-* campos obligatorios;
-* tipos de datos numéricos y categóricos;
-* edad dentro del rango permitido;
-* valores numéricos no negativos;
-* variables binarias limitadas a `0` y `1`;
-* categorías permitidas para contrato, región, método de pago y servicio de internet.
+- `200`: solicitud procesada correctamente.
+- `422`: datos de entrada inválidos.
+- `503`: modelo no disponible.
+- `500`: error inesperado durante la inferencia.
 
-La API puede devolver los siguientes códigos:
-
-* `200`: solicitud procesada correctamente;
-* `422`: datos de entrada inválidos;
-* `503`: el modelo no está disponible;
-* `500`: error inesperado durante la inferencia.
-
-La interfaz Streamlit también muestra mensajes cuando no puede conectarse con la API o cuando la solicitud no se procesa correctamente.
-
----
+Streamlit también informa errores de conexión, tiempo de espera o respuestas inválidas de la API.
 
 ## 9. Pruebas automáticas
 
-Las pruebas se ejecutan con Pytest.
-
-Desde la raíz del proyecto:
-
+```powershell
 .\.venv\Scripts\python.exe -m pytest -v
+```
 
-Las pruebas verifican:
+Las pruebas cubren el endpoint principal, el estado de la API, la carga del modelo, una predicción válida, el rechazo de datos inválidos y los componentes de datos y modelo del primer parcial.
 
-* el funcionamiento del endpoint principal;
-* el estado de la API;
-* la carga del modelo;
-* una predicción con datos válidos;
-* el rechazo de datos inválidos;
-* los componentes de datos y modelo desarrollados anteriormente.
-
-La ejecución debe finalizar con todas las pruebas aprobadas.
-
----
+La ejecución actual finaliza con **8 pruebas aprobadas**.
 
 ## 10. Evidencias de funcionamiento
 
-Para demostrar el funcionamiento local de la solución se deben incluir capturas o registros de:
+Las evidencias se encuentran en [`reports/evidencias_segundo_parcial`](../reports/evidencias_segundo_parcial):
 
-* Swagger mostrando los endpoints disponibles;
-* respuesta correcta de `GET /health`;
-* respuesta correcta de `POST /predict`;
-* interfaz Streamlit mostrando una predicción;
-* resultado de `docker compose ps`;
-* ejecución de Pytest con las pruebas aprobadas.
+- `01_pytest_8_passed.png`
+- `02_docker_compose_ps.png`
+- `03_swagger_endpoints.png`
+- `04_health_ok.png`
+- `05_predict_ok.png`
+- `06_streamlit_prediction.png`
 
-Estas evidencias permiten comprobar que la API, la interfaz, el modelo y los contenedores funcionan de manera integrada.
+Estas capturas muestran las pruebas aprobadas, los contenedores activos, los endpoints disponibles, las respuestas correctas de la API y la integración con Streamlit.

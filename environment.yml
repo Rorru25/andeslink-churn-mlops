@@ -16,3 +16,9 @@ dependencies:
       - dvc
       - joblib
       - pytest
+      - fastapi
+      - "uvicorn[standard]"
+      - pydantic
+      - streamlit
+      - requests
+      - httpx
