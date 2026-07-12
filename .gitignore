@@ -11,3 +11,6 @@ data/processed/
 # reports/figures/*.png
 # mlruns/
 # mlflow.db
+# Logs de inferencia
+logs/*.csv
+!logs/.gitkeep

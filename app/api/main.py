@@ -1,27 +1,26 @@
-from pathlib import Path
+import csv
+from datetime import datetime, timezone
 
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 
+from app.api.config import (
+    
+    HIGH_RISK_THRESHOLD,
+    LOGS_DIR,
+    LOW_RISK_THRESHOLD,
+    MODEL_NAME,
+    MODEL_PATH,
+    MODEL_VERSION,
+    PREDICTIONS_LOG_PATH,
+)
 from app.api.schemas import (
     ChurnInput,
     ChurnPrediction,
     HealthResponse,
 )
 
-
-# ---------------------------------------------------------
-# Configuración de rutas
-# ---------------------------------------------------------
-
-ROOT_DIR = Path(__file__).resolve().parents[2]
-MODEL_PATH = ROOT_DIR / "models" / "churn_model.joblib"
-
-
-# ---------------------------------------------------------
-# Creación de la aplicación
-# ---------------------------------------------------------
 
 app = FastAPI(
     title="AndesLink Churn API",
@@ -33,16 +32,9 @@ app = FastAPI(
 )
 
 
-# ---------------------------------------------------------
-# Carga del modelo
-# ---------------------------------------------------------
-
 def load_model():
     """
     Carga el pipeline serializado desde la carpeta models.
-
-    El pipeline contiene tanto el preprocesamiento como
-    el modelo final seleccionado durante el entrenamiento.
     """
     if not MODEL_PATH.exists():
         raise FileNotFoundError(
@@ -61,27 +53,67 @@ except Exception as error:
     model_load_error = str(error)
 
 
-# ---------------------------------------------------------
-# Funciones auxiliares
-# ---------------------------------------------------------
-
 def determine_risk_level(probability: float) -> str:
     """
     Convierte la probabilidad de churn en una categoría
     descriptiva para facilitar la interpretación.
     """
-    if probability >= 0.70:
+    if probability >= HIGH_RISK_THRESHOLD:
         return "alto"
 
-    if probability >= 0.40:
+    if probability >= LOW_RISK_THRESHOLD:
         return "medio"
 
     return "bajo"
 
 
-# ---------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------
+def write_prediction_log(
+    customer_data: dict,
+    prediction: int,
+    probability: float,
+    risk_level: str,
+) -> None:
+    """
+    Registra cada inferencia en un archivo CSV local.
+
+    Este log permite contar con una base simple para análisis posterior,
+    monitoreo de predicciones y generación de reportes de drift.
+    """
+    try:
+        LOGS_DIR.mkdir(parents=True, exist_ok=True)
+
+        file_exists = PREDICTIONS_LOG_PATH.exists()
+
+        row = {
+            "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+            "model_name": MODEL_NAME,
+            "model_version": MODEL_VERSION,
+            "prediction": prediction,
+            "churn_probability": round(probability, 4),
+            "risk_level": risk_level,
+        }
+
+        for key, value in customer_data.items():
+            row[f"input_{key}"] = value
+
+        with PREDICTIONS_LOG_PATH.open(
+            mode="a",
+            newline="",
+            encoding="utf-8",
+        ) as file:
+            writer = csv.DictWriter(
+                file,
+                fieldnames=list(row.keys()),
+            )
+
+            if not file_exists:
+                writer.writeheader()
+
+            writer.writerow(row)
+
+    except Exception as error:
+        print(f"No se pudo registrar la inferencia: {error}")
+
 
 @app.get("/")
 def root():
@@ -148,12 +180,20 @@ def predict_churn(customer: ChurnInput):
         probability = float(
             model.predict_proba(input_dataframe)[0][1]
         )
+        risk_level = determine_risk_level(probability)
+
+        write_prediction_log(
+            customer_data=customer_data,
+            prediction=prediction,
+            probability=probability,
+            risk_level=risk_level,
+        )
 
         return {
             "prediction": prediction,
             "churn_probability": round(probability, 4),
-            "risk_level": determine_risk_level(probability),
-            "model_name": "logistic_regression",
+            "risk_level": risk_level,
+            "model_name": MODEL_NAME,
         }
 
     except Exception as error:
