@@ -76,3 +76,9 @@ def test_predict_rejects_invalid_age():
     )
 
     assert response.status_code == 422
+def test_metrics_endpoint():
+    response = client.get("/metrics")
+
+    assert response.status_code == 200
+    assert "andeslink_api_requests_total" in response.text
+    assert "andeslink_model_loaded" in response.text

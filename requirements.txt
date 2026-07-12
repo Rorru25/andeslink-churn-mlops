@@ -13,4 +13,4 @@ uvicorn[standard]
 pydantic
 streamlit
 requests
-httpx
+httpxprometheus-client

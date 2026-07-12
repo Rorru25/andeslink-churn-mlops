@@ -1,12 +1,14 @@
 import csv
+import time
 from datetime import datetime, timezone
 
 import joblib
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from starlette.responses import Response
 
 from app.api.config import (
-    
     HIGH_RISK_THRESHOLD,
     LOGS_DIR,
     LOW_RISK_THRESHOLD,
@@ -14,6 +16,15 @@ from app.api.config import (
     MODEL_PATH,
     MODEL_VERSION,
     PREDICTIONS_LOG_PATH,
+)
+from app.api.metrics import (
+    MODEL_LOADED,
+    PREDICTION_ERRORS_TOTAL,
+    PREDICTION_PROBABILITY,
+    PREDICTIONS_TOTAL,
+    REQUEST_COUNT,
+    REQUEST_LATENCY,
+    normalize_endpoint,
 )
 from app.api.schemas import (
     ChurnInput,
@@ -53,6 +64,42 @@ except Exception as error:
     model_load_error = str(error)
 
 
+MODEL_LOADED.set(1 if model_loaded else 0)
+
+
+@app.middleware("http")
+async def collect_metrics(request: Request, call_next):
+    """
+    Registra métricas técnicas de requests y latencia.
+    """
+    start_time = time.perf_counter()
+    endpoint = normalize_endpoint(request.url.path)
+    method = request.method
+
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        return response
+
+    except Exception:
+        status_code = 500
+        raise
+
+    finally:
+        elapsed_time = time.perf_counter() - start_time
+
+        REQUEST_COUNT.labels(
+            method=method,
+            endpoint=endpoint,
+            http_status=str(status_code),
+        ).inc()
+
+        REQUEST_LATENCY.labels(
+            method=method,
+            endpoint=endpoint,
+        ).observe(elapsed_time)
+
+
 def determine_risk_level(probability: float) -> str:
     """
     Convierte la probabilidad de churn en una categoría
@@ -75,9 +122,6 @@ def write_prediction_log(
 ) -> None:
     """
     Registra cada inferencia en un archivo CSV local.
-
-    Este log permite contar con una base simple para análisis posterior,
-    monitoreo de predicciones y generación de reportes de drift.
     """
     try:
         LOGS_DIR.mkdir(parents=True, exist_ok=True)
@@ -126,6 +170,7 @@ def root():
         "documentation": "/docs",
         "health": "/health",
         "prediction": "/predict",
+        "metrics": "/metrics",
     }
 
 
@@ -138,10 +183,23 @@ def health():
     Informa si la API se encuentra disponible
     y si el modelo fue cargado correctamente.
     """
+    MODEL_LOADED.set(1 if model_loaded else 0)
+
     return {
         "status": "ok" if model_loaded else "error",
         "model_loaded": model_loaded,
     }
+
+
+@app.get("/metrics")
+def metrics():
+    """
+    Expone métricas en formato compatible con Prometheus.
+    """
+    return Response(
+        content=generate_latest(),
+        media_type=CONTENT_TYPE_LATEST,
+    )
 
 
 @app.post(
@@ -162,6 +220,8 @@ def predict_churn(customer: ChurnInput):
             "model_load_error",
             "El modelo no pudo cargarse.",
         )
+
+        PREDICTION_ERRORS_TOTAL.inc()
 
         raise HTTPException(
             status_code=503,
@@ -189,6 +249,14 @@ def predict_churn(customer: ChurnInput):
             risk_level=risk_level,
         )
 
+        PREDICTIONS_TOTAL.labels(
+            prediction=str(prediction),
+            risk_level=risk_level,
+            model_name=MODEL_NAME,
+        ).inc()
+
+        PREDICTION_PROBABILITY.observe(probability)
+
         return {
             "prediction": prediction,
             "churn_probability": round(probability, 4),
@@ -197,6 +265,8 @@ def predict_churn(customer: ChurnInput):
         }
 
     except Exception as error:
+        PREDICTION_ERRORS_TOTAL.inc()
+
         raise HTTPException(
             status_code=500,
             detail=f"No se pudo generar la predicción: {error}",
