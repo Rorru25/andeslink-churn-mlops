@@ -37,6 +37,7 @@ def test_root_endpoint():
     assert data["documentation"] == "/docs"
     assert data["health"] == "/health"
     assert data["prediction"] == "/predict"
+    assert data["metrics"] == "/metrics"
 
 
 def test_health_endpoint():
@@ -50,7 +51,7 @@ def test_health_endpoint():
     assert data["model_loaded"] is True
 
 
-def test_predict_endpoint():
+def test_predict_endpoint_with_valid_payload():
     response = client.post(
         "/predict",
         json=VALID_CUSTOMER,
@@ -66,6 +67,30 @@ def test_predict_endpoint():
     assert data["model_name"] == "logistic_regression"
 
 
+def test_predict_response_contract():
+    response = client.post(
+        "/predict",
+        json=VALID_CUSTOMER,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    expected_fields = {
+        "prediction",
+        "churn_probability",
+        "risk_level",
+        "model_name",
+    }
+
+    assert set(data.keys()) == expected_fields
+    assert isinstance(data["prediction"], int)
+    assert isinstance(data["churn_probability"], float)
+    assert isinstance(data["risk_level"], str)
+    assert isinstance(data["model_name"], str)
+
+
 def test_predict_rejects_invalid_age():
     invalid_customer = VALID_CUSTOMER.copy()
     invalid_customer["customer_age"] = -5
@@ -76,9 +101,47 @@ def test_predict_rejects_invalid_age():
     )
 
     assert response.status_code == 422
+
+
+def test_predict_rejects_invalid_category():
+    invalid_customer = VALID_CUSTOMER.copy()
+    invalid_customer["contract_type"] = "contrato_inexistente"
+
+    response = client.post(
+        "/predict",
+        json=invalid_customer,
+    )
+
+    assert response.status_code == 422
+
+
+def test_predict_rejects_missing_required_field():
+    invalid_customer = VALID_CUSTOMER.copy()
+    invalid_customer.pop("monthly_charge")
+
+    response = client.post(
+        "/predict",
+        json=invalid_customer,
+    )
+
+    assert response.status_code == 422
+
+
+def test_predict_rejects_invalid_binary_value():
+    invalid_customer = VALID_CUSTOMER.copy()
+    invalid_customer["has_streaming"] = 3
+
+    response = client.post(
+        "/predict",
+        json=invalid_customer,
+    )
+
+    assert response.status_code == 422
+
+
 def test_metrics_endpoint():
     response = client.get("/metrics")
 
     assert response.status_code == 200
-    assert "andeslink_api_requests_total" in response.text
     assert "andeslink_model_loaded" in response.text
+    assert "andeslink_api_requests_total" in response.text
