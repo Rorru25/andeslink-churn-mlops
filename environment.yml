@@ -23,3 +23,4 @@ dependencies:
       - requests
       - httpx
       - prometheus-client
+      - evidently==0.6.7

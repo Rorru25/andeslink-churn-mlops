@@ -13,4 +13,6 @@ uvicorn[standard]
 pydantic
 streamlit
 requests
-httpxprometheus-client
+httpx
+prometheus-client
+evidently==0.6.7
