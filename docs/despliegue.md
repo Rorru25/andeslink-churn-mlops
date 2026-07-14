@@ -1,182 +1,91 @@
-# Despliegue local de AndesLink Churn MLOps
+# Despliegue local del proyecto AndesLink Churn
 
-## 1. Objetivo
+Este documento resume cómo levantar el proyecto en un entorno local y cómo comprobar que los servicios principales funcionan.
 
-Este documento describe cómo ejecutar localmente el sistema de predicción de churn desarrollado para AndesLink Servicios Digitales S.A.
+## Entorno utilizado
 
-La solución permite ingresar los datos de un cliente mediante una interfaz gráfica, enviarlos a una API de inferencia y obtener la clase predicha, la probabilidad estimada de churn, el nivel de riesgo y el nombre del modelo utilizado.
+El proyecto fue probado localmente en Windows usando PowerShell, Docker Desktop y Python 3.12.
 
-El modelo se carga desde `models/churn_model.joblib`, sin necesidad de reentrenarlo al iniciar la aplicación.
+Para ejecutar el despliegue se necesita tener instalado:
 
-## 2. Arquitectura local
+- Python 3.12;
+- Docker Desktop;
+- Git;
+- un editor como VS Code.
 
-La solución está compuesta por:
+Todos los comandos se ejecutan desde la raíz del repositorio: andeslink-churn-mlops
 
-- **Streamlit:** interfaz gráfica para ingresar datos y visualizar resultados.
-- **FastAPI:** servicio de inferencia que valida los datos, ejecuta el modelo y devuelve la predicción.
+## Dependencias locales
 
-```text
-Usuario
-  |
-  v
-Interfaz Streamlit
-Puerto 8501
-  |
-  | POST /predict
-  v
-API FastAPI
-Puerto 8000
-  |
-  | Validación con Pydantic
-  v
-Pipeline y modelo serializado
-models/churn_model.joblib
-  |
-  v
-Predicción y probabilidad
-  |
-  v
-Resultado mostrado en Streamlit
-```
+El proyecto usa un entorno virtual `.venv`.
 
-Docker Compose construye y ejecuta ambos servicios dentro de una red local.
-
-## 3. Requisitos
-
-### Ejecución con Docker
-
-- Docker Desktop.
-- Docker Compose, incluido en Docker Desktop.
-- Puertos `8000` y `8501` disponibles.
-
-### Ejecución sin Docker
-
-- Python 3.12.
-- Un entorno virtual de Python.
-- Dependencias declaradas en `requirements.txt`.
-
-Todos los comandos deben ejecutarse desde la carpeta raíz del proyecto.
-
-## 4. Ejecución con Docker Compose
-
-Esta es la forma principal de despliegue.
-
-### 4.1 Construir e iniciar los servicios
-
-```powershell
-docker compose up --build -d
-```
-
-Este comando construye la imagen, instala las dependencias e inicia FastAPI y Streamlit.
-
-### 4.2 Verificar los contenedores
-
-```powershell
-docker compose ps
-```
-
-Los servicios `api` y `streamlit` deben aparecer en ejecución.
-
-### 4.3 Accesos
-
-- Swagger: `http://localhost:8000/docs`
-- Estado de la API: `http://localhost:8000/health`
-- Streamlit: `http://localhost:8501`
-
-### 4.4 Consultar logs
-
-```powershell
-docker compose logs api
-docker compose logs streamlit
-```
-
-Para seguir todos los logs en tiempo real:
-
-```powershell
-docker compose logs -f
-```
-
-### 4.5 Detener los servicios
-
-```powershell
-docker compose down
-```
-
-Este comando detiene y elimina los contenedores sin borrar el código ni el modelo.
-
-## 5. Ejecución local sin Docker
-
-### 5.1 Crear el entorno virtual
-
-```powershell
-python -m venv .venv
-```
-
-### 5.2 Instalar las dependencias
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install --upgrade pip
+Para instalar las dependencias:
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
 
-### 5.3 Iniciar FastAPI
+En este trabajo no usé la activación tradicional del entorno virtual porque en PowerShell puede fallar por la política de ejecución de scripts. Por eso, los comandos llaman directamente al Python de `.venv`.
 
-En una primera terminal:
+## Validación previa
 
-```powershell
+Antes de levantar los servicios, se ejecutan las pruebas:
+
+.\.venv\Scripts\python.exe -m pytest -v --disable-warnings
+
+El despliegue se considera listo para probar si los tests pasan correctamente.
+
+## Ejecución local de la API
+
+Para probar solamente la API sin Docker:
+
 .\.venv\Scripts\python.exe -m uvicorn app.api.main:app --reload
-```
 
-La API queda disponible en `http://localhost:8000` y Swagger en `http://localhost:8000/docs`.
+La API queda disponible en: http://127.0.0.1:8000
 
-### 5.4 Iniciar Streamlit
+La documentación Swagger se puede abrir en: http://127.0.0.1:8000/docs
 
-En una segunda terminal, manteniendo FastAPI activo:
+También se pueden revisar:
 
-```powershell
-.\.venv\Scripts\python.exe -m streamlit run app\streamlit_app\app.py
-```
+http://127.0.0.1:8000/health
+http://127.0.0.1:8000/metrics
 
-La interfaz queda disponible en `http://localhost:8501`.
+No se debe ejecutar directamente `app/api/main.py`, porque la API está preparada para iniciarse como módulo del proyecto.
 
-## 6. Comunicación entre servicios
+## Despliegue con Docker Compose
 
-Sin Docker, Streamlit utiliza por defecto:
+Para levantar el sistema completo:
 
-```text
-http://127.0.0.1:8000
-```
+docker compose up --build -d
 
-Con Docker Compose utiliza:
+Para revisar el estado de los contenedores:
 
-```text
-http://api:8000
-```
+docker compose ps
 
-La dirección se configura mediante la variable de entorno `API_URL`. Dentro de Compose, `api` es el nombre del servicio de FastAPI y funciona como dirección interna entre contenedores.
+Los servicios esperados son:
 
-## 7. Endpoints
+| Servicio               |Puerto| Uso               |
+|------------------------|------|-------------------|
+| `andeslink-api`        | 8000 | API de predicción |
+| `andeslink-streamlit`  | 8501 | Interfaz web      |
+| `andeslink-prometheus` | 9090 | Métricas          |
+| `andeslink-grafana`    | 3000 | Dashboard         |
 
-### `GET /`
+Si la API aparece como `healthy`, significa que el contenedor está respondiendo correctamente al endpoint `/health`.
 
-Devuelve información general de la aplicación.
+## URLs principales
 
-### `GET /health`
+| Servicio   | URL                            |
+|------------|--------------------------------|
+| Swagger    | `http://localhost:8000/docs`   |
+| Healthcheck| `http://localhost:8000/health` |
+| Métricas   | `http://localhost:8000/metrics`|
+| Streamlit  | `http://localhost:8501`        |
+| Prometheus | `http://localhost:9090`        |
+| Grafana    | `http://localhost:3000`        |
 
-Comprueba que la API esté activa y que el modelo haya sido cargado.
+## Prueba de predicción
 
-```json
-{
-  "status": "ok",
-  "model_loaded": true
-}
-```
+La predicción se puede probar desde Swagger o desde Streamlit.
 
-### `POST /predict`
-
-Recibe los datos del cliente y devuelve la predicción de churn.
-
-Ejemplo de solicitud:
+Ejemplo de entrada para `/predict`:
 
 ```json
 {
@@ -198,7 +107,7 @@ Ejemplo de solicitud:
 }
 ```
 
-Ejemplo de respuesta:
+Ejemplo de respuesta esperada:
 
 ```json
 {
@@ -209,40 +118,123 @@ Ejemplo de respuesta:
 }
 ```
 
-La probabilidad exacta depende de los datos enviados.
+Cada predicción también genera un registro local en: logs/predictions_log.csv
 
-## 8. Validación y manejo de errores
+Ese archivo no se versiona porque se genera durante la ejecución.
 
-El contrato de entrada y salida está definido con Pydantic. Se validan campos obligatorios, tipos, rangos numéricos, variables binarias y categorías permitidas.
+## Verificación de Prometheus
 
-Códigos principales:
+Prometheus se abre desde: http://localhost:9090
 
-- `200`: solicitud procesada correctamente.
-- `422`: datos de entrada inválidos.
-- `503`: modelo no disponible.
-- `500`: error inesperado durante la inferencia.
+Para comprobar que está leyendo la API, se puede ejecutar esta consulta:
 
-Streamlit también informa errores de conexión, tiempo de espera o respuestas inválidas de la API.
+```promql
+up{job="andeslink-api"}
+```
+El valor esperado es `1`.
 
-## 9. Pruebas automáticas
+También se pueden revisar métricas como:
 
-```powershell
-.\.venv\Scripts\python.exe -m pytest -v
+```promql
+andeslink_model_loaded
+andeslink_api_requests_total
+andeslink_predictions_total
 ```
 
-Las pruebas cubren el endpoint principal, el estado de la API, la carga del modelo, una predicción válida, el rechazo de datos inválidos y los componentes de datos y modelo del primer parcial.
+Si todavía no se realizaron predicciones, algunas métricas pueden aparecer en cero o no tener valores suficientes.
 
-La ejecución actual finaliza con **8 pruebas aprobadas**.
+## Verificación de Grafana
 
-## 10. Evidencias de funcionamiento
+Grafana se abre desde: http://localhost:3000
 
-Las evidencias se encuentran en [`reports/evidencias_segundo_parcial`](../reports/evidencias_segundo_parcial):
+Credenciales iniciales:
 
-- `01_pytest_8_passed.png`
-- `02_docker_compose_ps.png`
-- `03_swagger_endpoints.png`
-- `04_health_ok.png`
-- `05_predict_ok.png`
-- `06_streamlit_prediction.png`
+```text
+Usuario: admin
+Contraseña: musica15
+```
 
-Estas capturas muestran las pruebas aprobadas, los contenedores activos, los endpoints disponibles, las respuestas correctas de la API y la integración con Streamlit.
+El dashboard se encuentra en:
+
+Dashboards > AndesLink > AndesLink API Monitoring
+
+Para que los paneles tengan datos, conviene ejecutar algunas predicciones desde Swagger o Streamlit y esperar unos segundos a que Prometheus recolecte las métricas.
+
+## Reporte de Evidently
+
+El reporte de monitoreo de datos se genera con:
+
+```powershell
+.\.venv\Scripts\python.exe -m monitoring.evidently.generate_drift_report
+```
+
+El archivo generado queda en:
+
+reports/monitoring/evidently_drift_report.html
+
+Para abrirlo:
+
+```powershell
+Start-Process reports\monitoring\evidently_drift_report.html
+```
+
+Cuando todavía no hay suficientes inferencias reales registradas, el script usa una ventana actual simulada. Esto permite probar el flujo de monitoreo aunque el proyecto no tenga tráfico continuo.
+
+## Apagar los servicios
+
+Para detener los contenedores:
+
+```powershell
+docker compose down
+```
+
+Para volver a levantarlos:
+
+```powershell
+docker compose up --build -d
+```
+
+## Problemas encontrados
+
+Durante el armado del despliegue aparecieron algunos problemas puntuales.
+
+Uno fue una dependencia mal escrita en `requirements.txt`:
+
+```text
+httpxprometheus-client
+```
+
+La corrección fue separarla en dos líneas:
+
+```text
+httpx
+prometheus-client
+```
+
+También apareció un error de codificación `UTF-8 BOM` al validar el JSON del dashboard de Grafana. Se resolvió guardando el archivo sin BOM.
+
+Otro error posible es ejecutar directamente `app/api/main.py`. En ese caso puede aparecer:
+
+```text
+No module named app
+```
+
+La forma correcta de iniciar la API es:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.api.main:app --reload
+```
+
+## Comprobación final
+
+Para dar por probado el despliegue, se revisa que:
+
+- los tests pasen;
+- `docker compose ps` muestre los cuatro servicios;
+- Swagger responda;
+- Streamlit permita consultar una predicción;
+- `/health` indique que el modelo está cargado;
+- `/metrics` exponga métricas;
+- Prometheus muestre el job `andeslink-api` con valor `1`;
+- Grafana cargue el dashboard;
+- Evidently genere el reporte HTML.
