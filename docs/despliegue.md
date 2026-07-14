@@ -238,3 +238,17 @@ Para dar por probado el despliegue, se revisa que:
 - Prometheus muestre el job `andeslink-api` con valor `1`;
 - Grafana cargue el dashboard;
 - Evidently genere el reporte HTML.
+
+## Limitaciones 
+
+Este despliegue es local y está pensado para una entrega académica.
+
+No incluye:
+-autenticación;
+-base de datos productiva;
+-despliegue en cloud;
+-alertas automáticas;
+-reentrenamiento programado;
+-tráfico real continuo.
+
+Aun así, permite probar el flujo completo: modelo entrenado, API disponible, interfaz de consulta, métricas técnicas, dashboard y reporte de drift.
